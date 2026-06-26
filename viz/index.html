@@ -104,8 +104,8 @@
       </select></div>
       <div class="field" data-help="Images fetched <b>per class</b>. More examples → a more general decision boundary; too few and the net just memorizes a handful of pictures."><label>per class</label><input id="cN" type="number" value="8" min="2" max="20" /></div>
       <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="16,16" /></div>
-      <div class="field" data-help="<b>Training steps</b>: full-batch gradient-descent updates. More = more learning (and a longer live animation); returns diminish once the loss flattens out."><label>steps</label><input id="cSteps" type="number" value="100" min="10" max="400" /></div>
-      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.2" step="0.05" min="0.01" /></div>
+      <div class="field" data-help="<b>Training steps</b>: full-batch gradient-descent updates. More = more learning (and a longer live animation); returns diminish once the loss flattens out."><label>steps</label><input id="cSteps" type="number" value="200" min="10" max="600" /></div>
+      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.06" step="0.02" min="0.005" /></div>
       <div class="field" data-help="<b>Random seed</b> for weight initialization. Change it for a different starting point — and a different trained result — from the same images."><label>seed</label><input id="cSeed" type="number" value="1337" /></div>
       <div class="field" data-help="Show a plane behind layer 0 of <i>exactly what the input neurons hold</i>: it cycles through the individual training images as the net learns (it trains on them separately, one at a time), and shows your test image when you classify one. Also toggled with the <b>i</b> key."><label>display input images</label><input type="checkbox" id="cShowImg" checked /></div>
     </details>
@@ -185,7 +185,7 @@ const STYLES = ['stacked', 'exploded', 'connected'];
 let LAYERS = [], FRAMES = [], L = 0, totalSteps = 1;
 let gmax = { g: 1e-9, w: 1e-9, a: 1e-9 };
 let meshes = [], allMeshes = [], edges = null;
-let lensIdx = 0, styleIdx = 1, frameIdx = 0, playing = false, training = false, lastAdvance = 0;
+let lensIdx = 0, styleIdx = 2, frameIdx = 0, playing = false, training = false, lastAdvance = 0;
 const FRAME_MS = 90;
 
 // ── scene (built once) ───────────────────────────────────────────────────────
@@ -200,7 +200,8 @@ controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSp
 scene.add(new THREE.AmbientLight(0xffffff, 0.72));
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(6,10,8); scene.add(dirLight);
 const geo = new THREE.BoxGeometry(0.62, 0.62, 0.62);
-const edgeMat = new THREE.LineBasicMaterial({ color: 0x6c7086, transparent: true, opacity: 0.12 });
+const edgeMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 });
+const edgeTmp = new THREE.Color();
 
 const gridDims = s => { const c = Math.ceil(Math.sqrt(s)); return [c, Math.ceil(s/c)]; };
 const isPixelInput = () => L && LAYERS[0] === TW * TH * 3;   // input layer is an image
@@ -234,8 +235,31 @@ function rebuildEdges() {
   const pts = [];
   for (let l = 0; l < L-1; l++) for (let i = 0; i < LAYERS[l]; i++) for (let j = 0; j < LAYERS[l+1]; j++)
     pts.push(neuronPos(l,i,styleIdx), neuronPos(l+1,j,styleIdx));
-  edges = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), edgeMat);
+  const geo = new THREE.BufferGeometry().setFromPoints(pts);
+  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pts.length * 3), 3));
+  edges = new THREE.LineSegments(geo, edgeMat);
   scene.add(edges);
+  updateEdgeColors();
+}
+
+// Each edge is gossamer-faint by default and brightens into the heat-map colors
+// as the neuron it feeds gains gradient (its influence on the loss). The dense
+// input fan-in is kept extra faint so the inner connections stay legible.
+function updateEdgeColors() {
+  if (!edges || !FRAMES.length) return;
+  const f = FRAMES[frameIdx], denom = gmax.g || 1e-9, col = edges.geometry.attributes.color;
+  let v = 0;
+  for (let l = 0; l < L-1; l++) {
+    const inputEdge = l === 0;                          // 1296→layer1 fan-in: too dense, keep gauzy
+    for (let i = 0; i < LAYERS[l]; i++) for (let j = 0; j < LAYERS[l+1]; j++) {
+      const t = Math.max(0, Math.min(1, f.neurons[l+1][j].g / denom));
+      const intensity = inputEdge ? 0.02 + 0.22 * t : 0.05 + 0.95 * t;
+      edgeTmp.copy(heat(t)).multiplyScalar(intensity); // dark/faint → full heat color
+      col.setXYZ(v++, edgeTmp.r, edgeTmp.g, edgeTmp.b);
+      col.setXYZ(v++, edgeTmp.r, edgeTmp.g, edgeTmp.b);
+    }
+  }
+  col.needsUpdate = true;
 }
 function relayout() {
   for (let l = 0; l < L; l++) for (let i = 0; i < LAYERS[l]; i++)
@@ -297,8 +321,9 @@ function placeImagePlane() {
 // which training image the plane shows at a given frame — one shared mapping, so
 // live training and replay/scrub stay matched (each step → its image).
 function planeForFrame(idx) {
-  if (!trainRows.length) return;
-  const i = Math.floor(idx / 4) % trainRows.length;
+  if (!trainRows.length || !FRAMES[idx]) return;
+  const img = FRAMES[idx].img;                         // the exact image this step used (SGD)
+  const i = (img >= 0 && img < trainRows.length) ? img : Math.floor(idx / 4) % trainRows.length;
   if (i !== planeImgIdx) { planeImgIdx = i; setInputPlane(trainRows[i]); }
 }
 
@@ -317,6 +342,7 @@ function applyFrame() {
       m.scale.setScalar(0.55 + 0.70 * Math.max(0, Math.min(1, v)));
     }
   }
+  if (edges) updateEdgeColors();
   scrub.value = frameIdx; updateHud();
 }
 
@@ -453,8 +479,8 @@ async function fetchAndTrain() {
   lastTermB = document.getElementById('cTermB').value.trim() || 'B';
   const n = Math.max(2, +document.getElementById('cN').value || 8);
   const hidden = document.getElementById('cHidden').value || '12,12';
-  const steps = Math.max(10, +document.getElementById('cSteps').value || 100);
-  const lr = +document.getElementById('cLr').value || 0.2;
+  const steps = Math.max(10, +document.getElementById('cSteps').value || 200);
+  const lr = +document.getElementById('cLr').value || 0.06;
   const seed = (+document.getElementById('cSeed').value | 0) >>> 0;
   const k = +document.getElementById('cRes').value || 4;   // input res: 4k×3k thumb → (6k)² features
   TW = 4 * k; TH = 3 * k; FEAT_DIM = TW * TH * 3;
