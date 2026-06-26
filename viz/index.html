@@ -96,16 +96,18 @@
       <div class="field" data-help="<b>Input resolution</b> — the thumbnail each image is shrunk to, which IS the number of input neurons. Higher = more visual detail for the net, but a bigger, slower network. Each option is a perfect square for a clean grid."><label>input res</label><select id="cRes">
         <option value="2">12×12 · 144</option>
         <option value="3">18×18 · 324</option>
-        <option value="4" selected>24×24 · 576</option>
+        <option value="4">24×24 · 576</option>
         <option value="5">30×30 · 900</option>
-        <option value="6">36×36 · 1296</option>
+        <option value="6" selected>36×36 · 1296</option>
+        <option value="7">42×42 · 1764</option>
+        <option value="8">48×48 · 2304</option>
       </select></div>
       <div class="field" data-help="Images fetched <b>per class</b>. More examples → a more general decision boundary; too few and the net just memorizes a handful of pictures."><label>per class</label><input id="cN" type="number" value="8" min="2" max="20" /></div>
-      <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="12,12" /></div>
+      <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="16,16" /></div>
       <div class="field" data-help="<b>Training steps</b>: full-batch gradient-descent updates. More = more learning (and a longer live animation); returns diminish once the loss flattens out."><label>steps</label><input id="cSteps" type="number" value="100" min="10" max="400" /></div>
-      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high → unstable, dead ReLUs, loss stuck above 1; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.2" step="0.05" min="0.01" /></div>
+      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.2" step="0.05" min="0.01" /></div>
       <div class="field" data-help="<b>Random seed</b> for weight initialization. Change it for a different starting point — and a different trained result — from the same images."><label>seed</label><input id="cSeed" type="number" value="1337" /></div>
-      <div class="field" data-help="Show the training images as a plane behind the input layer — their pixels <i>are</i> layer 0's neurons. Also toggled with the <b>i</b> key."><label>display input images</label><input type="checkbox" id="cShowImg" checked /></div>
+      <div class="field" data-help="Show a plane behind layer 0 of <i>exactly what the input neurons hold</i>: it cycles through the individual training images as the net learns (it trains on them separately, one at a time), and shows your test image when you classify one. Also toggled with the <b>i</b> key."><label>display input images</label><input type="checkbox" id="cShowImg" checked /></div>
     </details>
     <div id="cStatus"></div>
   </div>
@@ -123,7 +125,7 @@
   <button id="back" title="step back ([)">◀</button>
   <input id="scrub" type="range" min="0" value="0" />
   <button id="fwd" title="step forward (])">▶</button>
-  <label>lens</label><select id="lensSel" data-help="What the cube's color shows per neuron: <b>gradient norm</b> (how hard it's learning), <b>weight norm</b> (structure formed), or <b>activation</b> (output size; dark = a dead ReLU)."></select>
+  <label>lens</label><select id="lensSel" data-help="What the cube's color shows per neuron: <b>gradient norm</b> (how hard it's learning), <b>weight norm</b> (structure formed), or <b>activation</b> (how strongly it fires). A permanently dark neuron has “died” — it outputs zero for every image and no longer learns."></select>
   <label>style</label><select id="styleSel" data-help="Layer layout: <b>stacked</b> (flush), <b>exploded</b> (spread along depth), or <b>connected</b> (edges drawn between layers)."></select>
 </div>
 
@@ -152,9 +154,9 @@
     <h2>LEARN MORE</h2>
     <p>This is a Rust reimplementation of Andrej Karpathy’s
        <a href="https://github.com/karpathy/micrograd" target="_blank" rel="noopener">micrograd</a>.
-       His walkthrough,
+       His YouTube video
        <a href="https://www.youtube.com/watch?v=VMj-3S1tku0" target="_blank" rel="noopener">“The spelled-out
-       intro to neural networks and backpropagation: building micrograd”</a>, is the best place to start.</p>
+       intro to neural networks and backpropagation: building micrograd”</a> is a great place to start learning how this works. :)</p>
     <button class="start" id="aboutClose">Start →</button>
   </div>
 </div>
@@ -175,7 +177,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 const LENSES = [
   { key: 'g', name: 'gradient norm', note: 'learning activity — cools as loss falls' },
   { key: 'w', name: 'weight norm',   note: 'structure formed' },
-  { key: 'a', name: 'activation',    note: 'mean |output|; dark ⇒ dead ReLU' },
+  { key: 'a', name: 'activation',    note: 'each neuron’s output strength; a dark one has “died” — stuck outputting zero' },
 ];
 const STYLES = ['stacked', 'exploded', 'connected'];
 
@@ -192,20 +194,25 @@ renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeig
 document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07090f);
-scene.fog = new THREE.FogExp2(0x07090f, 0.022);
 const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 800);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
-scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+scene.add(new THREE.AmbientLight(0xffffff, 0.72));
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(6,10,8); scene.add(dirLight);
 const geo = new THREE.BoxGeometry(0.62, 0.62, 0.62);
 const edgeMat = new THREE.LineBasicMaterial({ color: 0x6c7086, transparent: true, opacity: 0.12 });
 
 const gridDims = s => { const c = Math.ceil(Math.sqrt(s)); return [c, Math.ceil(s/c)]; };
+const isPixelInput = () => L && LAYERS[0] === TW * TH * 3;   // input layer is an image
 function neuronPos(layer, idx, styleIdx) {
-  const s = LAYERS[layer], [cols, rows] = gridDims(s);
-  const col = idx % cols, row = Math.floor(idx / cols), zgap = styleIdx === 0 ? 1.3 : 5.0;
-  return new THREE.Vector3((col-(cols-1)/2), (row-(rows-1)/2), (layer-(L-1)/2) * zgap);
+  const zgap = styleIdx === 0 ? 1.3 : 5.0, z = (layer - (L-1)/2) * zgap;
+  if (layer === 0 && isPixelInput()) {                // lay input out AS the image: pixels × 3 channels,
+    const p = Math.floor(idx / 3), ch = idx % 3;      // each pixel's R,G,B clustered at its spot
+    const col = p % TW, row = Math.floor(p / TW);
+    return new THREE.Vector3((col - (TW-1)/2) + (ch - 1) * 0.30, ((TH-1)/2 - row), z);
+  }
+  const [cols, rows] = gridDims(LAYERS[layer]);
+  return new THREE.Vector3((idx % cols) - (cols-1)/2, Math.floor(idx / cols) - (rows-1)/2, z);
 }
 function clearScene() {
   for (const m of allMeshes) { scene.remove(m); m.material.dispose(); }
@@ -236,51 +243,93 @@ function relayout() {
   rebuildEdges(); placeImagePlane();
 }
 function fitCamera() {
-  const maxW = Math.max(...LAYERS.map(s => { const [c,r] = gridDims(s); return Math.max(c, r); }));
+  let maxW = 0;
+  for (let l = 0; l < L; l++) {
+    if (l === 0 && isPixelInput()) maxW = Math.max(maxW, TW, TH);
+    else { const [c, r] = gridDims(LAYERS[l]); maxW = Math.max(maxW, c, r); }
+  }
   const depth = (L - 1) * (styleIdx === 0 ? 1.3 : 5.0);
   const radius = Math.max(maxW, depth) * 1.1 + 5;
   camera.position.set(radius * 0.55, radius * 0.42, radius);
   controls.target.set(0, 0, 0); controls.update();
 }
 
-// the training images themselves, as a plane behind layer 0 (the input neurons
-// literally ARE these pixels). Built from the real thumbnails — not decoration.
-let imagePlane = null;
-function buildImagePlane(imgs) {
-  if (imagePlane) {
-    scene.remove(imagePlane); imagePlane.material.map.dispose();
-    imagePlane.material.dispose(); imagePlane.geometry.dispose(); imagePlane = null;
+// A plane behind layer 0 showing EXACTLY what the input neurons hold, decoded
+// from a real feature vector at the net's true TW×TH resolution (blocky on
+// purpose — that's what the network sees). During training we cycle through the
+// individual training images (the net trains on them separately, one at a time);
+// on classify we show the test image's own features. The mesh is reused — we just
+// swap its texture — so cycling per frame is cheap.
+let imagePlane = null, planeFeatures = null;
+function setInputPlane(features) {
+  if (!features || !L) return;
+  planeFeatures = features;                           // remembered for per-pixel hover
+  const cellPx = 18;                                  // upscale so we can draw a pixel grid
+  const cv = document.createElement('canvas'); cv.width = TW * cellPx; cv.height = TH * cellPx;
+  const ctx = cv.getContext('2d');
+  for (let p = 0; p < TW * TH; p++) {                 // row-major R,G,B order (matches extractFeatures)
+    const col = p % TW, row = Math.floor(p / TW);
+    ctx.fillStyle = `rgb(${Math.round((features[p*3]||0)*255)},${Math.round((features[p*3+1]||0)*255)},${Math.round((features[p*3+2]||0)*255)})`;
+    ctx.fillRect(col * cellPx, row * cellPx, cellPx, cellPx);
   }
-  if (!imgs.length) return;
-  const cols = Math.ceil(Math.sqrt(imgs.length)), rows = Math.ceil(imgs.length / cols), cell = 96;
-  const cv = document.createElement('canvas'); cv.width = cols * cell; cv.height = rows * cell;
-  const ctx = cv.getContext('2d'); ctx.fillStyle = '#11131f'; ctx.fillRect(0, 0, cv.width, cv.height);
-  imgs.forEach((im, i) => ctx.drawImage(im, (i % cols) * cell, Math.floor(i / cols) * cell, cell, cell));
-  const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, opacity: 0.95 });
-  imagePlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
-  scene.add(imagePlane); placeImagePlane();
+  ctx.strokeStyle = 'rgba(10,12,22,0.35)'; ctx.lineWidth = 1; ctx.beginPath();   // subtle pixel grid
+  for (let c = 1; c < TW; c++) { ctx.moveTo(c*cellPx + 0.5, 0); ctx.lineTo(c*cellPx + 0.5, cv.height); }
+  for (let r = 1; r < TH; r++) { ctx.moveTo(0, r*cellPx + 0.5); ctx.lineTo(cv.width, r*cellPx + 0.5); }
+  ctx.stroke();
+  const tex = new THREE.CanvasTexture(cv);
+  if (!imagePlane) {
+    imagePlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.97, side: THREE.DoubleSide }));
+    scene.add(imagePlane);
+  }
+  if (imagePlane.material.map) imagePlane.material.map.dispose();
+  imagePlane.material.map = tex; imagePlane.material.needsUpdate = true;
+  placeImagePlane();
   imagePlane.visible = showImg.checked;
+  colorInputCubes();                                  // keep the input cubes matching the shown image
 }
 function placeImagePlane() {
   if (!imagePlane || !L) return;
-  const [cols, rows] = gridDims(LAYERS[0]);
-  const w = Math.max(cols, rows) + 2;                 // cover the input grid + margin
-  imagePlane.scale.set(w, w, 1);
-  imagePlane.position.set(0, 0, neuronPos(0, 0, styleIdx).z - 2.4);   // just behind layer 0
+  imagePlane.scale.set(TW, TH, 1);                    // exactly the pixel-neuron grid footprint
+  imagePlane.position.set(0, 0, neuronPos(0, 0, styleIdx).z - 1.5);   // just behind the input pixels
+}
+
+// which training image the plane shows at a given frame — one shared mapping, so
+// live training and replay/scrub stay matched (each step → its image).
+function planeForFrame(idx) {
+  if (!trainRows.length) return;
+  const i = Math.floor(idx / 4) % trainRows.length;
+  if (i !== planeImgIdx) { planeImgIdx = i; setInputPlane(trainRows[i]); }
 }
 
 const tmp = new THREE.Color();
-const heat = t => { t = Math.max(0, Math.min(1, t)); return tmp.setHSL((1-t)*0.66, 0.95, 0.18 + 0.42*t); };
+const heat = t => { t = Math.max(0, Math.min(1, t)); return tmp.setHSL((1-t)*0.66, 0.95, 0.30 + 0.42*t); };
 
 function applyFrame() {
   if (!FRAMES.length) return;
   const f = FRAMES[frameIdx], lens = LENSES[lensIdx].key, denom = gmax[lens];
-  for (let l = 0; l < L; l++) for (let i = 0; i < LAYERS[l]; i++) {
-    const v = f.neurons[l][i][lens] / denom, c = heat(v), m = meshes[l][i];
-    m.material.color.copy(c); m.material.emissive.copy(c).multiplyScalar(0.45);
-    m.scale.setScalar(0.55 + 0.7 * Math.max(0, Math.min(1, v)));
+  const pixelIn = isPixelInput();
+  for (let l = 0; l < L; l++) {
+    if (l === 0 && pixelIn) { colorInputCubes(); continue; }   // input shows the image, not the heat lens
+    for (let i = 0; i < LAYERS[l]; i++) {
+      const v = f.neurons[l][i][lens] / denom, c = heat(v), m = meshes[l][i];
+      m.material.color.copy(c); m.material.emissive.copy(c).multiplyScalar(0.7);
+      m.scale.setScalar(0.55 + 0.70 * Math.max(0, Math.min(1, v)));
+    }
   }
   scrub.value = frameIdx; updateHud();
+}
+
+// Input neurons hold pixel values, colored on the same blue→red heat scale as the
+// rest of the cube, driven by each one's value (its R, G, or B).
+function colorInputCubes() {
+  if (!isPixelInput() || !planeFeatures || !meshes[0]) return;
+  for (let i = 0; i < LAYERS[0]; i++) {
+    const val = Math.max(0, Math.min(1, planeFeatures[i] || 0)), m = meshes[0][i], c = heat(val);
+    m.material.color.copy(c);
+    m.material.emissive.copy(c).multiplyScalar(0.7);
+    m.scale.setScalar(0.16 + 0.30 * val);
+  }
 }
 function updateHud() {
   const lens = LENSES[lensIdx];
@@ -303,7 +352,7 @@ function loadStructure(info) {
   updateHud();
 }
 function appendFrame(f) {
-  for (const layer of f.neurons) for (const n of layer)
+  for (let l = 1; l < f.neurons.length; l++) for (const n of f.neurons[l])   // skip input (it shows RGB, not heat)
     for (const k of ['g','w','a']) if (n[k] > gmax[k]) gmax[k] = n[k];
   FRAMES.push(f); frameIdx = FRAMES.length - 1; applyFrame();
 }
@@ -322,7 +371,7 @@ styleSel.value = styleIdx;
 
 const setLens  = i => { lensIdx = (i + LENSES.length) % LENSES.length; lensSel.value = lensIdx; applyFrame(); };
 const setStyle = i => { styleIdx = (i + STYLES.length) % STYLES.length; styleSel.value = styleIdx; relayout(); applyFrame(); };
-const setFrame = i => { playing = false; frameIdx = Math.max(0, Math.min(FRAMES.length-1, i)); applyFrame(); };
+const setFrame = i => { playing = false; frameIdx = Math.max(0, Math.min(FRAMES.length-1, i)); applyFrame(); planeForFrame(frameIdx); };
 const togglePlay = () => { if (!training) { playing = !playing; updateHud(); } };
 play.onclick = togglePlay;
 document.getElementById('back').onclick = () => setFrame(frameIdx - 1);
@@ -349,6 +398,7 @@ addEventListener('resize', () => {
 // ── image fetch + features (Wikimedia Commons, CORS-safe) ─────────────────────
 let TW = 16, TH = 12, FEAT_DIM = TW * TH * 3;   // set from "input res" at train time; 4k×3k → (6k)²
 let lastTermA = 'A', lastTermB = 'B', countsLine = '';
+let trainRows = [], planeImgIdx = -1;   // per-image feature vectors + which one the plane shows
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function loadImage(url, tries = 3) {
@@ -421,7 +471,8 @@ async function fetchAndTrain() {
 
     const info = JSON.parse(wasm_bindgen.session_begin(flat, rows.length, FEAT_DIM, labels, hidden, steps, seed, lr));
     loadStructure(info);
-    buildImagePlane([...a.imgs, ...b.imgs]);   // the real training images, behind layer 0
+    trainRows = rows;                                // the individual images the net trains on
+    planeImgIdx = 0; setInputPlane(rows[0]);         // the render loop cycles through them
     cStatus.innerHTML = `${countsLine}<br>training…`;
     training = true;                     // the render loop now drives session_step()
   } catch (err) {
@@ -440,8 +491,10 @@ document.getElementById('cQuery').onchange = e => {
   const img = new Image();
   img.onload = () => {
     URL.revokeObjectURL(img.src);
-    const score = wasm_bindgen.classify(extractFeatures(img));
+    const feats = extractFeatures(img);
+    const score = wasm_bindgen.classify(feats);
     if (Number.isNaN(score)) { verdict.textContent = 'train a classifier first'; return; }
+    setInputPlane(feats); planeImgIdx = -1;     // test image shown; force a refresh on next replay/scrub
     const cls = score > 0 ? lastTermA : lastTermB;
     const conf = Math.round(Math.min(1, Math.abs(Math.tanh(score))) * 100);
     verdict.innerHTML = `more like <b>${cls}</b><br><small>score ${score.toFixed(3)} · ${conf}% confident</small>`;
@@ -451,23 +504,45 @@ document.getElementById('cQuery').onchange = e => {
 
 // ── hover tooltip ──────────────────────────────────────────────────────────────
 const tip = document.getElementById('tip'), ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
-let hover = null;
+let hover = null;   // current intersection: a neuron mesh, or the image plane
 renderer.domElement.addEventListener('pointermove', e => {
   ptr.x = (e.clientX/innerWidth)*2-1; ptr.y = -(e.clientY/innerHeight)*2+1;
   ray.setFromCamera(ptr, camera);
-  const hit = ray.intersectObjects(allMeshes, false)[0];
-  hover = hit ? hit.object.userData : null;
+  const targets = (imagePlane && imagePlane.visible) ? [...allMeshes, imagePlane] : allMeshes;
+  hover = ray.intersectObjects(targets, false)[0] || null;
   if (hover) { tip.style.left = (e.clientX+14)+'px'; tip.style.top = (e.clientY+14)+'px'; }
   renderTip();
 });
 renderer.domElement.addEventListener('pointerleave', () => { hover = null; tip.style.display = 'none'; });
 function renderTip() {
-  if (!hover || !FRAMES.length) { tip.style.display = 'none'; return; }
-  const { layer, idx } = hover, n = FRAMES[frameIdx].neurons[layer][idx];
+  if (!hover) { tip.style.display = 'none'; return; }
+
+  if (hover.object === imagePlane) {                  // a pixel of the input image
+    if (!planeFeatures || !hover.uv) { tip.style.display = 'none'; return; }
+    const px = Math.min(TW-1, Math.max(0, Math.floor(hover.uv.x * TW)));
+    const py = Math.min(TH-1, Math.max(0, Math.floor((1 - hover.uv.y) * TH)));   // uv is bottom-up
+    const p = py * TW + px;
+    const r = planeFeatures[p*3] || 0, g = planeFeatures[p*3+1] || 0, b = planeFeatures[p*3+2] || 0;
+    const sw = `<span style="display:inline-block;width:10px;height:10px;border:1px solid #585b70;vertical-align:middle;background:rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})"></span>`;
+    const ch = (lab, val) => `<div class="row"><span>${lab}</span><span>${Math.round(val*255)} <small>(${val.toFixed(2)})</small></span></div>`;
+    tip.innerHTML = `<div class="t">pixel (${px}, ${py}) ${sw}</div>` + ch('R', r) + ch('G', g) + ch('B', b) +
+      `<div class="row off"><span>input neurons</span><span>#${p*3}–${p*3+2}</span></div>`;
+    tip.style.display = 'block';
+    return;
+  }
+
+  const ud = hover.object.userData;                   // otherwise a neuron
+  if (!ud || ud.layer === undefined || !FRAMES.length) { tip.style.display = 'none'; return; }
+  const { layer, idx } = ud, n = FRAMES[frameIdx].neurons[layer][idx];
   const role = layer === 0 ? 'input' : (layer === L-1 ? 'output' : 'hidden');
   const cur = LENSES[lensIdx].key;
   const row = (k, label) => `<div class="row ${k === cur ? 'on' : 'off'}"><span>${label}</span><span>${n[k].toFixed(4)}</span></div>`;
-  tip.innerHTML = `<div class="t">layer ${layer} · neuron ${idx} <small>(${role})</small></div>` +
+  let title = `layer ${layer} · neuron ${idx} <small>(${role})</small>`;
+  if (layer === 0 && isPixelInput()) {                // name the pixel + channel it belongs to
+    const p = Math.floor(idx / 3);
+    title = `input · pixel (${p % TW}, ${Math.floor(p / TW)}) · channel ${'RGB'[idx % 3]} <small>(neuron ${idx})</small>`;
+  }
+  tip.innerHTML = `<div class="t">${title}</div>` +
     row('g','grad norm') + row('w','weight norm') + row('a','activation');
   tip.style.display = 'block';
 }
@@ -500,9 +575,10 @@ function loop(t) {
   requestAnimationFrame(loop);
   if (training) {
     const f = wasm_bindgen.session_step();
-    if (f) appendFrame(JSON.parse(f)); else finishTraining(true);
+    if (f) { appendFrame(JSON.parse(f)); planeForFrame(frameIdx); }
+    else finishTraining(true);
   } else if (playing && FRAMES.length && t - lastAdvance > FRAME_MS) {
-    frameIdx = (frameIdx + 1) % FRAMES.length; applyFrame(); renderTip(); lastAdvance = t;
+    frameIdx = (frameIdx + 1) % FRAMES.length; applyFrame(); planeForFrame(frameIdx); renderTip(); lastAdvance = t;
   }
   controls.update(); renderer.render(scene, camera);
 }
