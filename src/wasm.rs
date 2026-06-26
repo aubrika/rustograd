@@ -44,7 +44,7 @@ pub fn session_begin(
     let lr0 = if lr > 0.0 { lr } else { 0.2 };
     let mut rng = StdRng::seed_from_u64(seed as u64);
 
-    let s = Session::new(xs, ys, &parse_hidden(hidden), steps.max(1), lr0, &mut rng);
+    let s = Session::new(xs, ys, &parse_hidden(hidden), steps.max(1), lr0, true, &mut rng);
     let layout = s.layout_json();
     SESSION.with(|m| *m.borrow_mut() = Some(s));
     layout
