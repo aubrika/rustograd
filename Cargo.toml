@@ -1,0 +1,39 @@
+[package]
+name = "rustograd"
+version = "0.1.0"
+edition = "2024"
+authors = ["aubrey <aubrey.shay.dyer@gmail.com>"]
+description = "A from-scratch Rust reimplementation of Karpathy's micrograd: a tiny scalar-valued autograd engine with a small neural-net library on top."
+
+# The autograd engine + nn library live in the lib crate (src/lib.rs).
+# cdylib is needed for the wasm build; rlib keeps the bin/examples/tests working.
+[lib]
+name = "rustograd"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+# An interactive REPL for poking at Values and networks. `cargo run --bin repl`
+[[bin]]
+name = "repl"
+path = "src/bin/repl.rs"
+
+[dependencies]
+# Random weight init for Neuron (parity with Python's random.uniform).
+rand = "0.8"
+
+# wasm-only: bindings + getrandom's JS shim (pinned to the installed wasm-bindgen
+# CLI so generated glue matches). Native builds pull neither.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "=0.2.126"
+getrandom = { version = "0.2", features = ["js"] }
+
+# --- Suggested deps you'll likely want as you tick off the roadmap ---
+# Uncomment when you reach the relevant checklist item.
+#
+# rustyline = "14"        # line editing / history for the REPL
+# plotters  = "0.3"       # plotting decision boundaries & loss curves (matplotlib parity)
+# graphviz-rust = "0.9"   # render the computation graph (graphviz/trace_graph parity)
+#                         #   or just emit DOT text yourself and shell out to `dot`.
+
+[dev-dependencies]
+# approx = "0.5"          # assert_relative_eq! for gradient-check tests
