@@ -115,8 +115,8 @@
 <div id="right">
   <div id="classifier" class="panel">
     <h3>CLASSIFY IMAGES</h3>
-    <div class="field" data-help="Search term for <b>class A</b>. We fetch the first matching images from Wikimedia Commons and label them <b>+1</b>; the network learns to separate A from B."><label>class A</label><input id="cTermA" value="sunflower" /></div>
-    <div class="field" data-help="Search term for <b>class B</b> (labeled <b>−1</b>). Pick something visually distinct from A — colors and brightness separate far better than meaning."><label>class B</label><input id="cTermB" value="blue sky" /></div>
+    <div class="field" data-help="Search term for <b>class A</b>. We fetch the first matching images from Wikimedia Commons and label them <b>+1</b>; the network learns to separate A from B."><label>class A</label><input id="cTermA" value="sunflower" autocomplete="off" /></div>
+    <div class="field" data-help="Search term for <b>class B</b> (labeled <b>−1</b>). Pick something visually distinct from A — colors and brightness separate far better than meaning."><label>class B</label><input id="cTermB" value="blue sky" autocomplete="off" /></div>
     <button id="fetchTrain" data-help="Fetch the images for both classes and train the network live — you'll watch the cube learn step by step.">Fetch &amp; Train</button>
     <details>
       <summary data-help="Knobs that shape the network and its training. Defaults are sensible; hover each for what it does.">Advanced options</summary>
@@ -129,11 +129,11 @@
         <option value="7">42×42 · 1764</option>
         <option value="8">48×48 · 2304</option>
       </select></div>
-      <div class="field" data-help="Images fetched <b>per class</b>. More examples → a more general decision boundary; too few and the net just memorizes a handful of pictures."><label>per class</label><input id="cN" type="number" value="8" min="2" max="20" /></div>
-      <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="16,16" /></div>
-      <div class="field" data-help="<b>Training steps</b>: full-batch gradient-descent updates. More = more learning (and a longer live animation); returns diminish once the loss flattens out."><label>steps</label><input id="cSteps" type="number" value="200" min="10" max="600" /></div>
-      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.06" step="0.02" min="0.005" /></div>
-      <div class="field" data-help="<b>Random seed</b> for weight initialization. Change it for a different starting point — and a different trained result — from the same images."><label>seed</label><input id="cSeed" type="number" value="1337" /></div>
+      <div class="field" data-help="Images fetched <b>per class</b>. More examples → a more general decision boundary; too few and the net just memorizes a handful of pictures."><label>per class</label><input id="cN" type="number" value="8" min="2" max="20" autocomplete="off" /></div>
+      <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="16,16" autocomplete="off" /></div>
+      <div class="field" data-help="<b>Training steps</b>: one image per step (stochastic gradient descent). More = more learning (and a longer live animation); returns diminish once the loss flattens out."><label>steps</label><input id="cSteps" type="number" value="200" min="10" max="600" autocomplete="off" /></div>
+      <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.045" step="0.01" min="0.005" autocomplete="off" /></div>
+      <div class="field" data-help="<b>Random seed</b> for weight initialization. Change it for a different starting point — and a different trained result — from the same images."><label>seed</label><input id="cSeed" type="number" value="1337" autocomplete="off" /></div>
       <div class="field" data-help="Show a plane behind layer 0 of <i>exactly what the input neurons hold</i>: it cycles through the individual training images as the net learns (it trains on them separately, one at a time), and shows your test image when you classify one. Also toggled with the <b>i</b> key."><label>display input images</label><input type="checkbox" id="cShowImg" checked /></div>
     </details>
     <div id="cStatus"></div>
@@ -507,7 +507,7 @@ async function fetchAndTrain() {
   const n = Math.max(2, +document.getElementById('cN').value || 8);
   const hidden = document.getElementById('cHidden').value || '12,12';
   const steps = Math.max(10, +document.getElementById('cSteps').value || 200);
-  const lr = +document.getElementById('cLr').value || 0.06;
+  const lr = +document.getElementById('cLr').value || 0.045;
   const seed = (+document.getElementById('cSeed').value | 0) >>> 0;
   const k = +document.getElementById('cRes').value || 4;   // input res: 4k×3k thumb → (6k)² features
   TW = 4 * k; TH = 3 * k; FEAT_DIM = TW * TH * 3;
