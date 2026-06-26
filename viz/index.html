@@ -135,6 +135,7 @@
       <div class="field" data-help="<b>Learning rate</b>: how big each weight update is. Too high and training goes unstable — neurons can “die” (get stuck outputting zero forever and stop learning) and the loss stalls; too low → slow crawl. It decays over the run."><label>learn rate</label><input id="cLr" type="number" value="0.045" step="0.01" min="0.005" autocomplete="off" /></div>
       <div class="field" data-help="<b>Random seed</b> for weight initialization. Change it for a different starting point — and a different trained result — from the same images."><label>seed</label><input id="cSeed" type="number" value="1337" autocomplete="off" /></div>
       <div class="field" data-help="Show a plane behind layer 0 of <i>exactly what the input neurons hold</i>: it cycles through the individual training images as the net learns (it trains on them separately, one at a time), and shows your test image when you classify one. Also toggled with the <b>i</b> key."><label>display input images</label><input type="checkbox" id="cShowImg" checked /></div>
+      <div class="field" data-help="Slowly spin the camera around the network on its own. Off by default — drag to look around yourself."><label>auto-rotate</label><input type="checkbox" id="cAutoRot" autocomplete="off" /></div>
     </details>
     <div id="cStatus"></div>
   </div>
@@ -223,7 +224,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07090f);
 const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 800);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true; controls.autoRotate = true; controls.autoRotateSpeed = 0.5;
+controls.enableDamping = true; controls.autoRotate = false; controls.autoRotateSpeed = 0.5;
 scene.add(new THREE.AmbientLight(0xffffff, 0.72));
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); dirLight.position.set(6,10,8); scene.add(dirLight);
 const geo = new THREE.BoxGeometry(0.62, 0.62, 0.62);
@@ -418,6 +419,8 @@ const cStatus = document.getElementById('cStatus'), verdict = document.getElemen
 const fetchBtn = document.getElementById('fetchTrain'), testBox = document.getElementById('test');
 const showImg = document.getElementById('cShowImg');
 showImg.onchange = () => { if (imagePlane) imagePlane.visible = showImg.checked; };
+const autoRot = document.getElementById('cAutoRot');
+autoRot.onchange = () => { controls.autoRotate = autoRot.checked; };
 LENSES.forEach((l, i) => lensSel.add(new Option(l.name, i)));
 STYLES.forEach((s, i) => styleSel.add(new Option(s, i)));
 styleSel.value = styleIdx;
