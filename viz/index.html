@@ -99,7 +99,8 @@
     #scrub { width: 100%; order: -1; height: 28px; }
     #playbar button { padding: 9px 13px; } #playbar select { padding: 8px; }
     #playbar label { display: none; }            /* save space; the selects speak for themselves */
-    #readout { display: none; }                  /* declutter; progress shows in the panel + cube */
+    #readout { top: 14px; left: 58px; right: 50px; bottom: auto; text-align: center; font-size: 11px;
+      background: rgba(17,20,32,.85); border: 1px solid #313244; border-radius: 8px; padding: 5px 6px; }
     #aboutBtn { top: 12px; right: 12px; bottom: auto; }
     #tip, #helptip { display: none !important; } /* no hover on touch */
     #about { padding: 14px; } #about .card { padding: 18px 18px; }
@@ -390,7 +391,7 @@ function updateHud() {
   if (FRAMES.length) {
     const f = FRAMES[frameIdx];
     readout.innerHTML = `step <b>${f.step}</b>/${totalSteps-1} · loss <b>${f.loss.toFixed(4)}</b>` +
-      ` · acc <b>${(f.acc*100).toFixed(0)}%</b><br>style <span class="style">${STYLES[styleIdx]}</span>`;
+      ` · acc <b>${(f.acc*100).toFixed(0)}%</b>`;
   } else readout.innerHTML = '';
   play.textContent = playing ? '⏸' : '▶';
 }
