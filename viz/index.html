@@ -79,9 +79,35 @@
               border-radius: 50%; border: 1px solid #45475a; background: #1e2030; color: #cdd6f4;
               cursor: pointer; font-weight: bold; }
   #aboutBtn:hover { border-color: #89b4fa; }
+
+  /* ── touch + mobile ─────────────────────────────────────────────────────── */
+  canvas { touch-action: none; }                 /* let OrbitControls own gestures */
+  html, body { overscroll-behavior: none; }      /* no pull-to-refresh hijack */
+  #panelToggle { display: none; }                /* hidden on desktop */
+
+  @media (max-width: 680px) {
+    #panelToggle { display: grid; place-items: center; position: fixed; top: 12px; left: 12px; z-index: 13;
+      width: 40px; height: 40px; border-radius: 9px; border: 1px solid #45475a;
+      background: rgba(30,32,48,.92); color: #cdd6f4; cursor: pointer; font-size: 18px; }
+    #hud { top: 60px; left: 14px; font-size: 11px; max-width: 62vw; }
+    #right { top: 60px; right: 8px; left: 8px; width: auto; max-height: 62vh; overflow-y: auto; }
+    body.panels-hidden #right { display: none; }
+    .field input, .field select { width: 54%; min-height: 30px; }
+    #classifier button, #cQuery { min-height: 40px; }
+    #playbar { left: 6px; right: 6px; bottom: 6px; transform: none; flex-wrap: wrap;
+      justify-content: center; gap: 8px; padding: 8px; }
+    #scrub { width: 100%; order: -1; height: 28px; }
+    #playbar button { padding: 9px 13px; } #playbar select { padding: 8px; }
+    #playbar label { display: none; }            /* save space; the selects speak for themselves */
+    #readout { display: none; }                  /* declutter; progress shows in the panel + cube */
+    #aboutBtn { top: 12px; right: 12px; bottom: auto; }
+    #tip, #helptip { display: none !important; } /* no hover on touch */
+    #about { padding: 14px; } #about .card { padding: 18px 18px; }
+  }
 </style>
 </head>
 <body>
+<button id="panelToggle" title="show / hide controls">☰</button>
 <div id="hud"></div>
 <div id="readout"></div>
 
@@ -190,7 +216,7 @@ const FRAME_MS = 90;
 
 // ── scene (built once) ───────────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07090f);
@@ -595,6 +621,7 @@ const about = document.getElementById('about');
 document.getElementById('aboutClose').onclick = () => { about.style.display = 'none'; };
 document.getElementById('aboutBtn').onclick = () => { about.style.display = 'grid'; };
 about.addEventListener('click', e => { if (e.target === about) about.style.display = 'none'; });
+document.getElementById('panelToggle').onclick = () => document.body.classList.toggle('panels-hidden');
 
 // ── render loop: drive training live, else replay ─────────────────────────────
 function loop(t) {
