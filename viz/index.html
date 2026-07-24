@@ -120,14 +120,14 @@
     <button id="fetchTrain" data-help="Fetch the images for both classes and train the network live — you'll watch the cube learn step by step.">Fetch &amp; Train</button>
     <details>
       <summary data-help="Knobs that shape the network and its training. Defaults are sensible; hover each for what it does.">Advanced options</summary>
-      <div class="field" data-help="<b>Input resolution</b> — the thumbnail each image is shrunk to, which IS the number of input neurons. Higher = more visual detail for the net, but a bigger, slower network. Each option is a perfect square for a clean grid."><label>input res</label><select id="cRes">
-        <option value="2">12×12 · 144</option>
-        <option value="3">18×18 · 324</option>
-        <option value="4">24×24 · 576</option>
-        <option value="5">30×30 · 900</option>
-        <option value="6" selected>36×36 · 1296</option>
-        <option value="7">42×42 · 1764</option>
-        <option value="8">48×48 · 2304</option>
+      <div class="field" data-help="<b>Input resolution</b> — the RGB thumbnail each image is shrunk to (width×height). Its pixels × 3 channels ARE the input neurons, shown in the cube as a square grid (the neuron counts are perfect squares). Higher = more visual detail for the net, but a bigger, slower network."><label>input res</label><select id="cRes">
+        <option value="2">8×6 · 144</option>
+        <option value="3">12×9 · 324</option>
+        <option value="4">16×12 · 576</option>
+        <option value="5">20×15 · 900</option>
+        <option value="6" selected>24×18 · 1296</option>
+        <option value="7">28×21 · 1764</option>
+        <option value="8">32×24 · 2304</option>
       </select></div>
       <div class="field" data-help="Images fetched <b>per class</b>. More examples → a more general decision boundary; too few and the net just memorizes a handful of pictures."><label>per class</label><input id="cN" type="number" value="8" min="2" max="20" autocomplete="off" /></div>
       <div class="field" data-help="<b>Hidden-layer sizes</b>, comma-separated (e.g. 12,12). Bigger/more layers add capacity to fit complex boundaries, but train slower and overfit more easily on few images. An output neuron is appended automatically."><label>hidden</label><input id="cHidden" value="16,16" autocomplete="off" /></div>
@@ -142,7 +142,7 @@
 
   <div id="test" class="panel">
     <h3>TEST IMAGE</h3>
-    <input id="cQuery" type="file" accept="image/*" data-help="Pick any local image. It's reduced to the same 16×12 RGB features and the trained network scores it as more like A or B." />
+    <input id="cQuery" type="file" accept="image/*" data-help="Pick any local image. It's reduced to the same tiny RGB thumbnail the network was trained on and scored as more like A or B." />
     <div id="verdict">train a classifier, then drop an image here</div>
     <div id="veil">Training…</div>
   </div>
@@ -177,7 +177,7 @@
        <b>↑/↓</b> change the layout, drag to orbit, scroll to zoom, and hover a neuron for its numbers.
        On the gradient lens you’ll see the cube “cool down” as the loss falls.</p>
     <h2>WHAT TO EXPECT</h2>
-    <p>It’s a <b>toy</b>. It does best with visually distinct classes (color) and will struggle with semantic ones like cat-vs-dog — it only sees a 16×12 thumbnail by default,
+    <p>It’s a <b>toy</b>. It does best with visually distinct classes (color) and will struggle with semantic ones like cat-vs-dog — it only sees a 24×18 thumbnail by default,
        with no convolutions or pretrained features. Small training sets mean it can overfit, too.</p>
     <h2>LEARN MORE</h2>
     <p>This is a Rust reimplementation of Andrej Karpathy’s
