@@ -25,7 +25,14 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config { hidden: vec![16, 16], steps: 100, samples: 100, noise: 0.1, seed: 1337, lr0: 1.0 }
+        Config {
+            hidden: vec![16, 16],
+            steps: 100,
+            samples: 100,
+            noise: 0.1,
+            seed: 1337,
+            lr0: 1.0,
+        }
     }
 }
 
@@ -43,7 +50,10 @@ pub fn make_moons(n: usize, noise: f64, rng: &mut impl Rng) -> (Vec<Vec<f64>>, V
     let mut ys = Vec::with_capacity(n);
     for i in 0..n_out {
         let t = std::f64::consts::PI * i as f64 / (n_out as f64 - 1.0);
-        xs.push(vec![t.cos() + noise * randn(rng), t.sin() + noise * randn(rng)]);
+        xs.push(vec![
+            t.cos() + noise * randn(rng),
+            t.sin() + noise * randn(rng),
+        ]);
         ys.push(-1.0);
     }
     for i in 0..n_in {
@@ -125,7 +135,20 @@ impl Session {
             order.swap(i, rng.gen_range(0..=i));
         }
 
-        Session { g, model, xs, ys, order, watermark, dim, layers, k: 0, steps: steps.max(1), lr0, sgd }
+        Session {
+            g,
+            model,
+            xs,
+            ys,
+            order,
+            watermark,
+            dim,
+            layers,
+            k: 0,
+            steps: steps.max(1),
+            lr0,
+            sgd,
+        }
     }
 
     pub fn steps(&self) -> usize {
@@ -133,7 +156,12 @@ impl Session {
     }
 
     pub fn layout_json(&self) -> String {
-        let l = self.layers.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
+        let l = self
+            .layers
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
         format!("{{\"layers\":[{}],\"steps\":{}}}", l, self.steps)
     }
 
@@ -144,7 +172,11 @@ impl Session {
             return None;
         }
         let k = self.k;
-        let frame = if self.sgd { self.step_sgd(k) } else { self.step_full(k) };
+        let frame = if self.sgd {
+            self.step_sgd(k)
+        } else {
+            self.step_full(k)
+        };
         self.k += 1;
         Some(frame)
     }
@@ -167,7 +199,13 @@ impl Session {
                 layer
                     .neurons()
                     .iter()
-                    .map(|nrn| nrn.parameters().iter().map(|&p| self.g.nodes[p].grad.powi(2)).sum::<f64>().sqrt())
+                    .map(|nrn| {
+                        nrn.parameters()
+                            .iter()
+                            .map(|&p| self.g.nodes[p].grad.powi(2))
+                            .sum::<f64>()
+                            .sqrt()
+                    })
                     .collect()
             })
             .collect()
@@ -181,7 +219,13 @@ impl Session {
                 layer
                     .neurons()
                     .iter()
-                    .map(|nrn| nrn.parameters().iter().map(|&p| self.g.nodes[p].data.powi(2)).sum::<f64>().sqrt())
+                    .map(|nrn| {
+                        nrn.parameters()
+                            .iter()
+                            .map(|&p| self.g.nodes[p].data.powi(2))
+                            .sum::<f64>()
+                            .sqrt()
+                    })
                     .collect()
             })
             .collect()
@@ -192,7 +236,9 @@ impl Session {
         self.g.nodes.truncate(self.watermark);
         let leaves: Vec<usize> = x.iter().map(|&v| self.g.value(v)).collect();
         let acts = self.model.forward_verbose(&mut self.g, &leaves);
-        acts.iter().map(|la| la.iter().map(|&idx| self.g.nodes[idx].data.abs()).collect()).collect()
+        acts.iter()
+            .map(|la| la.iter().map(|&idx| self.g.nodes[idx].data.abs()).collect())
+            .collect()
     }
 
     /// Full-set loss (mean hinge + L2) and accuracy — for a stable display curve.
@@ -210,10 +256,16 @@ impl Session {
             }
             total += (1.0 - self.ys[i] * s).max(0.0);
         }
-        let reg: f64 = self.model.parameters().iter().map(|&p| self.g.nodes[p].data.powi(2)).sum();
+        let reg: f64 = self
+            .model
+            .parameters()
+            .iter()
+            .map(|&p| self.g.nodes[p].data.powi(2))
+            .sum();
         (total / n as f64 + 1e-4 * reg, correct as f64 / n as f64)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn frame_json(
         k: usize,
         img: i64,
@@ -224,7 +276,10 @@ impl Session {
         input_acts: &[f64],
         hidden_acts: &[Vec<f64>],
     ) -> String {
-        let input_neurons: Vec<String> = input_acts.iter().map(|&a| neuron_json(0.0, 0.0, a)).collect();
+        let input_neurons: Vec<String> = input_acts
+            .iter()
+            .map(|&a| neuron_json(0.0, 0.0, a))
+            .collect();
         let mut layers_json = vec![format!("[{}]", input_neurons.join(","))];
         for li in 0..grads.len() {
             let neurons: Vec<String> = (0..grads[li].len())
@@ -255,7 +310,16 @@ impl Session {
         let input_acts = self.xs[img].clone();
         let (loss, acc) = self.full_metrics();
 
-        Session::frame_json(k, img as i64, loss, acc, &grads, &weights, &input_acts, &hidden_acts)
+        Session::frame_json(
+            k,
+            img as i64,
+            loss,
+            acc,
+            &grads,
+            &weights,
+            &input_acts,
+            &hidden_acts,
+        )
     }
 
     // ── full batch (every step uses all images) ──────────────────────────────
@@ -294,8 +358,12 @@ impl Session {
         let weights = self.weight_norms();
 
         // mean activations over the batch
-        let mut hidden: Vec<Vec<f64>> =
-            self.model.layers().iter().map(|l| vec![0.0; l.neurons().len()]).collect();
+        let mut hidden: Vec<Vec<f64>> = self
+            .model
+            .layers()
+            .iter()
+            .map(|l| vec![0.0; l.neurons().len()])
+            .collect();
         let mut input = vec![0.0f64; self.dim];
         for i in 0..n {
             let a = self.activations_for(&self.xs[i].clone());
@@ -310,7 +378,9 @@ impl Session {
         }
         let nf = n as f64;
         input.iter_mut().for_each(|a| *a /= nf);
-        hidden.iter_mut().for_each(|l| l.iter_mut().for_each(|a| *a /= nf));
+        hidden
+            .iter_mut()
+            .for_each(|l| l.iter_mut().for_each(|a| *a /= nf));
 
         Session::frame_json(k, -1, loss, acc, &grads, &weights, &input, &hidden)
     }
@@ -345,8 +415,17 @@ pub fn train_dataset(
         }
         i += 1;
     }
-    let layers_str = s.layers.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
-    let json = format!("{{\"layers\":[{}],\"frames\":[{}]}}", layers_str, frames.join(","));
+    let layers_str = s
+        .layers
+        .iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    let json = format!(
+        "{{\"layers\":[{}],\"frames\":[{}]}}",
+        layers_str,
+        frames.join(",")
+    );
     (json, s)
 }
 
@@ -363,9 +442,17 @@ mod tests {
 
     #[test]
     fn trains_custom_architecture() {
-        let cfg = Config { hidden: vec![10, 10, 10], steps: 40, ..Config::default() };
+        let cfg = Config {
+            hidden: vec![10, 10, 10],
+            steps: 40,
+            ..Config::default()
+        };
         let json = train(&cfg);
-        assert!(json.contains("\"layers\":[2,10,10,10,1]"), "got: {}", &json[..40]);
+        assert!(
+            json.contains("\"layers\":[2,10,10,10,1]"),
+            "got: {}",
+            &json[..40]
+        );
         let losses: Vec<f64> = json
             .split("\"loss\":")
             .skip(1)
@@ -399,7 +486,13 @@ mod tests {
         }
         assert_eq!(frames, 200);
         assert!(saw_img, "frames should record the image index used");
-        assert!(s.classify(&[1.2, 1.0, 0.9]) > 0.0, "positive cluster misclassified");
-        assert!(s.classify(&[-1.1, -0.9, -1.0]) < 0.0, "negative cluster misclassified");
+        assert!(
+            s.classify(&[1.2, 1.0, 0.9]) > 0.0,
+            "positive cluster misclassified"
+        );
+        assert!(
+            s.classify(&[-1.1, -0.9, -1.0]) < 0.0,
+            "negative cluster misclassified"
+        );
     }
 }

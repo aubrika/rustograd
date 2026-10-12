@@ -5,9 +5,9 @@
 //!   animation frame (each returns one telemetry frame, or "" when done) so the
 //!   browser renders the net as it learns. classify() scores new inputs after.
 
-use crate::trainer::{train, Config, Session};
-use rand::rngs::StdRng;
+use crate::trainer::{Config, Session, train};
 use rand::SeedableRng;
+use rand::rngs::StdRng;
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
 
@@ -38,13 +38,29 @@ pub fn session_begin(
     lr: f64,
 ) -> String {
     let xs: Vec<Vec<f64>> = (0..n)
-        .map(|i| features[i * dim..(i + 1) * dim].iter().map(|&v| v as f64).collect())
+        .map(|i| {
+            features[i * dim..(i + 1) * dim]
+                .iter()
+                .map(|&v| v as f64)
+                .collect()
+        })
         .collect();
-    let ys: Vec<f64> = labels.iter().map(|&v| if v >= 0.0 { 1.0 } else { -1.0 }).collect();
+    let ys: Vec<f64> = labels
+        .iter()
+        .map(|&v| if v >= 0.0 { 1.0 } else { -1.0 })
+        .collect();
     let lr0 = if lr > 0.0 { lr } else { 0.2 };
     let mut rng = StdRng::seed_from_u64(seed as u64);
 
-    let s = Session::new(xs, ys, &parse_hidden(hidden), steps.max(1), lr0, true, &mut rng);
+    let s = Session::new(
+        xs,
+        ys,
+        &parse_hidden(hidden),
+        steps.max(1),
+        lr0,
+        true,
+        &mut rng,
+    );
     let layout = s.layout_json();
     SESSION.with(|m| *m.borrow_mut() = Some(s));
     layout
@@ -54,7 +70,12 @@ pub fn session_begin(
 /// training is complete (or no session exists).
 #[wasm_bindgen]
 pub fn session_step() -> String {
-    SESSION.with(|m| m.borrow_mut().as_mut().and_then(|s| s.step()).unwrap_or_default())
+    SESSION.with(|m| {
+        m.borrow_mut()
+            .as_mut()
+            .and_then(|s| s.step())
+            .unwrap_or_default()
+    })
 }
 
 /// Score a feature vector against the kept model. `> 0` ⇒ class A, `< 0` ⇒ class B.
@@ -73,7 +94,14 @@ pub fn classify(features: &[f32]) -> f64 {
 /// The built-in moons demo (full recording in one call). Kept for the native
 /// example parity; the browser uses the live session API above.
 #[wasm_bindgen]
-pub fn train_recording(hidden: &str, steps: usize, samples: usize, noise: f64, seed: u32, lr: f64) -> String {
+pub fn train_recording(
+    hidden: &str,
+    steps: usize,
+    samples: usize,
+    noise: f64,
+    seed: u32,
+    lr: f64,
+) -> String {
     let cfg = Config {
         hidden: parse_hidden(hidden),
         steps: steps.max(1),

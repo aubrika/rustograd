@@ -1,22 +1,17 @@
-//! rustograd REPL — an interactive prompt for experimenting with `Value`s and
-//! networks, the way you'd poke at micrograd in a Python shell or notebook.
+//! rustograd REPL — placeholder.
 //!
-//! This is a *starting skeleton*: it reads lines and echoes them. Your job
-//! (ROADMAP.md → "Interactive REPL") is to grow it into something that can
-//! build Values, run ops, call `.backward()`, and print grads.
+//! This binary only reads lines and echoes them back. A real evaluator (build
+//! values, run ops, call `backward`, print grads) is an unchecked item on the
+//! learning roadmap: ROADMAP.md → "Interactive REPL".
 //!
-//! Two paths, pick per your goals:
-//!   • Build it out here — add `rustyline` for history/editing, then a small
-//!     expression parser/evaluator over `rustograd::engine::Value`.
-//!   • Or, for zero-effort interactive Rust, use `evcxr`:
-//!         cargo install evcxr_repl   # then run `evcxr`
-//!     and `:dep rustograd = { path = "." }` to load this crate live.
-//!     (evcxr also ships a Jupyter kernel — handy for the plotting items.)
+//! For interactive use today, `evcxr` works with the library as it is:
+//!     cargo install evcxr_repl   # then run `evcxr`
+//! and `:dep rustograd = { path = "." }` to load this crate live.
 
 use std::io::{self, Write};
 
 fn main() {
-    println!("rustograd REPL (skeleton). Type `quit` to exit.");
+    println!("rustograd REPL (placeholder: echoes input, evaluates nothing). Type `quit` to exit.");
     let stdin = io::stdin();
     let mut line = String::new();
 
@@ -33,9 +28,8 @@ fn main() {
             break;
         }
 
-        // TODO: parse `input`, build the Value graph, eval, optionally backward,
-        // and print the result. For now we just echo.
-        println!("(todo) you typed: {input}");
+        // Not implemented: parse `input`, build the graph, eval, optionally backward.
+        println!("(not implemented) you typed: {input}");
     }
 
     println!("bye");

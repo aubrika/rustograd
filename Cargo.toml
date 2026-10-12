@@ -3,6 +3,7 @@ name = "rustograd"
 version = "0.1.0"
 edition = "2024"
 authors = ["Aubrey <aubrika@users.noreply.github.com>"]
+license = "MIT"
 description = "A from-scratch Rust reimplementation of Karpathy's micrograd: a tiny scalar-valued autograd engine with a small neural-net library on top."
 
 # The autograd engine + nn library live in the lib crate (src/lib.rs).
@@ -12,7 +13,7 @@ name = "rustograd"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
-# An interactive REPL for poking at Values and networks. `cargo run --bin repl`
+# Placeholder REPL (echoes input only; see ROADMAP.md). `cargo run --bin repl`
 [[bin]]
 name = "repl"
 path = "src/bin/repl.rs"

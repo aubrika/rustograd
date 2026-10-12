@@ -19,8 +19,8 @@ use rand::Rng;
 /// A single neuron: `Σ wᵢ·xᵢ + b`, optionally passed through ReLU.
 pub struct Neuron {
     w: Vec<usize>, // weights
-    b: usize, // bias 
-    nonlin: bool, // whether to apply ReLU
+    b: usize,      // bias
+    nonlin: bool,  // whether to apply ReLU
 }
 
 impl Neuron {
@@ -33,7 +33,9 @@ impl Neuron {
     /// (no `thread_rng`, which would pull in `getrandom`'s JS shim).
     pub fn new(g: &mut Graph, rng: &mut impl Rng, nin: usize, nonlin: bool) -> Self {
         let scale = (6.0 / nin.max(1) as f64).sqrt();
-        let w = (0..nin).map(|_| g.value(rng.gen_range(-1.0..1.0) * scale)).collect();
+        let w = (0..nin)
+            .map(|_| g.value(rng.gen_range(-1.0..1.0) * scale))
+            .collect();
         let b = g.value(0.0);
         Neuron { w, b, nonlin }
     }
@@ -41,14 +43,15 @@ impl Neuron {
     /// Forward pass over an input slice of node indices. Appends the
     /// `Σ wᵢ·xᵢ + b` (and optional relu) subgraph and returns the output index.
     pub fn forward(&self, g: &mut Graph, x: &[usize]) -> usize {
-
         let mut acc = self.b; // start with the bias
 
-        for (&wi, &xi) in self.w.iter().zip(x) { // for each weight and input
+        for (&wi, &xi) in self.w.iter().zip(x) {
+            // for each weight and input
             let prod = g.mul(wi, xi); // compute wᵢ·xᵢ
             acc = g.add(acc, prod); // accumulate into the sum
         }
-        if self.nonlin { // optionally apply ReLU
+        if self.nonlin {
+            // optionally apply ReLU
             g.relu(acc)
         } else {
             acc
@@ -70,7 +73,9 @@ pub struct Layer {
 
 impl Layer {
     pub fn new(g: &mut Graph, rng: &mut impl Rng, nin: usize, nout: usize, nonlin: bool) -> Self {
-        let neurons = (0..nout).map(|_| Neuron::new(g, rng, nin, nonlin)).collect();
+        let neurons = (0..nout)
+            .map(|_| Neuron::new(g, rng, nin, nonlin))
+            .collect();
         Layer { neurons }
     }
 

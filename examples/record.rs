@@ -5,7 +5,7 @@
 //! All the real work lives in `rustograd::trainer` (shared with the wasm build);
 //! this just runs it natively and wraps the JSON as `window.RECORDING = …`.
 
-use rustograd::trainer::{train, Config};
+use rustograd::trainer::{Config, train};
 use std::fs;
 
 fn main() {

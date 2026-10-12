@@ -42,8 +42,16 @@ fn sanity_check() {
 
     g.backward(y);
 
-    assert!((g.nodes[y].data - (-20.0)).abs() < TOL, "y.data = {}", g.nodes[y].data);
-    assert!((g.nodes[x].grad - 46.0).abs() < TOL, "x.grad = {}", g.nodes[x].grad);
+    assert!(
+        (g.nodes[y].data - (-20.0)).abs() < TOL,
+        "y.data = {}",
+        g.nodes[y].data
+    );
+    assert!(
+        (g.nodes[x].grad - 46.0).abs() < TOL,
+        "x.grad = {}",
+        g.nodes[x].grad
+    );
 }
 
 /// Mirrors micrograd's `test_more_ops`: exercises +, *, **, /, -, unary neg and relu, and checks the final output and leaf grads.
@@ -100,9 +108,21 @@ fn more_ops() {
 
     g.backward(out);
 
-    assert!((g.nodes[out].data - 24.70408163265306).abs() < TOL, "out.data = {}", g.nodes[out].data);
-    assert!((g.nodes[a].grad - 138.83381924198252).abs() < TOL, "a.grad = {}", g.nodes[a].grad);
-    assert!((g.nodes[b].grad - 645.5772594752186).abs() < TOL, "b.grad = {}", g.nodes[b].grad);
+    assert!(
+        (g.nodes[out].data - 24.70408163265306).abs() < TOL,
+        "out.data = {}",
+        g.nodes[out].data
+    );
+    assert!(
+        (g.nodes[a].grad - 138.83381924198252).abs() < TOL,
+        "a.grad = {}",
+        g.nodes[a].grad
+    );
+    assert!(
+        (g.nodes[b].grad - 645.5772594752186).abs() < TOL,
+        "b.grad = {}",
+        g.nodes[b].grad
+    );
 }
 
 /// Build a fixed expression over the leaves `xs`. The leaves are created first,
