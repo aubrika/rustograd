@@ -1,6 +1,6 @@
 # rustograd · a neural net you can watch learn
 
-This app trains a tiny neural network to tell two kinds of images apart, and draws it as a 3-D cube **as it learns, step by step**.
+This app trains a tiny neural network to tell two kinds of images apart, and draws it as a 3-D lattice **as it learns, step by step**.
 
 **Live demo: [aubrika.github.io/rustograd](https://aubrika.github.io/rustograd/)**
 
