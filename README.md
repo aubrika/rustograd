@@ -4,7 +4,7 @@ This app trains a tiny neural network to tell two kinds of images apart, and dra
 
 **Live demo: [aubrika.github.io/rustograd](https://aubrika.github.io/rustograd/)**
 
-![Scrubbing through 200 training steps on "sunflower" vs "blue sky". Each small cube is a neuron, colored here by weight norm.](docs/training.gif)
+![Scrubbing through 200 training steps on "sunflower" vs "blue sky". Each small cube is a neuron, colored here by activation: the input layer shows the image the net is seeing at that step.](docs/training.gif)
 
 ## How to use
 
